@@ -1,72 +1,65 @@
-This is where we will explain our project.
+# Sarcasm Detector
 
-Descriptive statistics:
+Seven classifiers trained on the same headline dataset to answer one question: how much does model complexity buy you when detecting sarcasm in short text? Team project by three Rutgers students.
 
-Capitalization frequency,
-Word count per label,
-Avg sentence length per label,
-Distribution of sentence length,
-Frequency n-grams (2-10),
-Sentiment frequency per label,
-first/last word freq per label
+<!-- TODO: add the course name, and one line on which parts you built -->
 
-Preprocessing steps:
+## Results
 
-Do not remove stop words - they vary per label,
-Lowercase the data,
-No data augmentation,
-Large training set,
-No significant class imbalance,
-Remove unnecessary white space,
-Tokenization,
-Punctuation,
-Keep but make sure it is a separate token,
-Differentiate between … adn .,
-Do not remove stop words,
+Binary classification (sarcastic or not) on 21,464 training headlines, 716 validation and 966 test.
 
-Feature extraction:
+| Model | Validation accuracy | Test accuracy | Test F1 |
+|---|---|---|---|
+| **MLP (256, 128) on TF-IDF + features** | **84.6%** | **84.8%** | **0.829** |
+| BiLSTM (word + part-of-speech embeddings) | 82.8% | 82.8% | 0.813 |
+| CNN | 82.8% | 82.5% | 0.802 |
+| SVM | 82.5% | 81.7% | 0.801 |
+| Logistic regression | 83.1% | 81.5% | 0.799 |
+| Naive Bayes | 79.9% | 80.5% | 0.775 |
+| Random forest | 82.0% | 80.3% | 0.786 |
 
-Features:
-Tf-idf vectorization,
-Static embeddings - hyperparameter: window size,
-Sentiment frequency,
-Sentence length,
-Punctuation,
-first/last word frequency,
-Bag of words (n-grams),
-Parts of speech frequency,
-L1 + L2 regularization,
-Ablation study,
+The spread is small: about four points of test accuracy separate the best model from the worst. A plain MLP over TF-IDF and hand-built features beat both sequence models, which suggests that on short headlines the engineered features carry most of the signal.
 
-Model Architecture & Selection
+Numbers are computed from the prediction files in this repo (`*_test_pred*.csv`, `*_valid_pred*.csv`).
 
-Models:
-Bi-lstm,
-Random forest,
-Naive bayes,
-Logistic regression,
-CNN,
-NN,
-SVM
+## Approach
 
-Ensemble method options:
-Stacking
-Boosting
+**Preprocessing** (`preprocessing.ipynb`)
+- Lowercased text and normalised whitespace.
+- Kept stop words, because their frequency differs between the two classes.
+- Kept punctuation as separate tokens, and treated `...` differently from `.`.
 
-Each model alone
+**Features** (`feature_engineering.ipynb`)
+- TF-IDF vectors.
+- Sentiment score and length in words.
+- Punctuation counts: exclamation marks, question marks, ellipses, quotes, dashes, and punctuation density.
+- Part-of-speech tag counts and tag bigrams.
 
-Pure stacking
+**Models**
+- Classical: logistic regression, naive Bayes, SVM and random forest (scikit-learn).
+- MLP: two hidden layers (256, 128) over TF-IDF plus the scaled hand-built features.
+- CNN and BiLSTM in PyTorch. The BiLSTM combines 128-dimensional word embeddings with 32-dimensional part-of-speech embeddings and the auxiliary features.
 
-Pure boosting - for each model
+**Evaluation**
+- Hyperparameters chosen on the validation set; the test set was used only for the final numbers.
 
-Combination of boost then stack
+## Repository layout
 
-Combination of stack then boost
+| Path | What it is |
+|---|---|
+| `preliminaryAnalysis.ipynb` | Descriptive statistics on the raw data |
+| `preprocessing.ipynb`, `feature_engineering.ipynb` | Data pipeline |
+| `logitsticRegression.py`, `naiveBayes.py`, `svm.py`, `randomforest.py`, `mlp.py` | Classical models and the MLP |
+| `cnn.ipynb`, `bilstm.ipynb` | PyTorch models |
+| `stacking.ipynb` | Stacking ensemble experiment |
+| `predict_sarcasm.py`, `get_predictions.ipynb` | Run saved models on new data |
+| `*_preds.csv`, `*_predictions.csv` | Per-model predictions on each split |
 
-Training methodology
+## Run it
 
-Cross entropy vs 0-1 Loss Function
+```bash
+pip install pandas numpy scipy scikit-learn torch joblib
+python mlp.py
+```
 
-k-fold cross validation
-
-use validation set to test hyperparameters
+The preprocessed splits and TF-IDF matrices are committed, so each model script runs without repeating the pipeline.
